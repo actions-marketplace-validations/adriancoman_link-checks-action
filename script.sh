@@ -10,23 +10,23 @@ IFS=',' read -ra FILE_ARRAY <<< "$FILE"
 URLS=""
 for filename in "${FILE_ARRAY[@]}"
 do
-    urls=$(grep -o 'https\?://[a-zA-Z0-9./?=_&-]\+' $filename)
+    urls=$(grep -o 'https\?://[a-zA-Z0-9./?=_&-]\+' "$filename")
     URLS="$URLS $urls"
 done
 
-# Check the status code of each URL with curl
+# Check the status code of each URL with curl, following redirects
 i=0
 failed_urls=()
 for url in $URLS
 do
-    status_code=$(curl --silent --head --output /dev/null --write-out '%{http_code}' $url)
-    if [ $status_code -ne 200 ]; then
-      echo "$i: $url - Failed (HTTP $status_code)"
-      failed_urls+=("$url")
+    # GET the URL and follow up on redirects
+    status_code=$(curl -L --silent --head --output /dev/null --write-out '%{http_code}' "$url")
+    if [ "$status_code" -ne 200 ]; then
+        echo "$i: $url - Failed (HTTP $status_code)"
+        failed_urls+=("$url")
     fi
     ((i++))
 done
-
 
 # If there were failed URLs, exit with an error
 if [ ${#failed_urls[@]} -gt 0 ]; then
